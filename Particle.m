@@ -25,11 +25,9 @@ classdef Particle
             end
         end
         function [obj]= update(obj,w,c,pm,gBest,problem)
-            obj = obj.updateV(w,c,gBest);
-            obj = obj.updateX();
+            obj = obj.updateV(w,c,gBest).updateX();
             [obj.cost, obj.infeasablity] = problem(obj.x);
-            obj = obj.applyMutatation(pm,problem);
-            obj = obj.updatePbest();
+            obj = obj.applyMutatation(pm,problem).updatePbest();
         end
         function obj = updateV(obj,w,c,gBest)
             obj.v = w.*obj.v + c(1).*rand.*(obj.pBest-obj.x) + c(2).*rand.*(gBest.x-obj.x);
@@ -39,12 +37,12 @@ classdef Particle
         end
         function obj = applyMutatation(obj,pm,problem)
             if rand<pm
-                X=obj.Mutate(pm);
-                [X.cost,X.infeasablity]=problem(X.x);
-                if X.dominates(obj)
-                    obj=X;
+                other=obj.Mutate(pm);
+                [other.cost,other.infeasablity]=problem(other.x);
+                if other.dominates(obj)
+                    obj=other;
                 elseif rand<0.5
-                        obj=X;
+                        obj=other;
                 end
             end
         end

@@ -1,1 +1,2 @@
-[gBest, swarm] = pso();
+options = psooptions();
+[gBest, swarm] = pso(options);
