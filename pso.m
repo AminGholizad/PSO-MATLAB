@@ -13,25 +13,25 @@ swarm(1,options.swarm_size) = Particle();
 for i =1:options.swarm_size
     swarm(i)=Particle(options.lower_bound,options.upper_bound,options.problem);
 end
-[~,I] = min([swarm.pBest_cost]);
-gBest = swarm(I);
+gBest = swarm.best();
 %% Loop
 for it=1:options.max_iter
     wc = w(it); %current inertia weight
     pc = pm(it); %current mutation probiblity
     for i =1:options.swarm_size %update particles
-        swarm(i)=swarm(i).update(wc,options.c,pc,gBest,options.problem);
+        swarm(i)=swarm(i).update(wc,options.c,pc,gBest);
     end
-    [B,I] = min([swarm.cost]);
-    if gBest.cost > B %update global best
-        gBest = swarm(I);
+    B = swarm.best();
+    if B.dominates(gBest) %update global best
+        gBest = B;
     end
     if options.display
-        M = mean([swarm.cost]);
-        if mod(it,10)==0 || it==1
-            fprintf("\t\t\t\tBest\t\t\t\tMean\n")
-            fprintf("Generation\t\tf(x)\t\t\t\tf(x)\n")
+        M = mean(vertcat(swarm.objective));
+        C = mean(vertcat(swarm.infeasibility));
+        if mod(it,10)==1
+            fprintf("\t\t\t\tBest\t\t\t\t\t\tMean\n")
+            fprintf("Generation\t\tf(x)\t\tc(x)\t\t\tf(x)\t\t\tc(x)\n")
         end
-        fprintf("%d\t\t\t%0.06f\t\t\t\t%0.06f\n",it,B,M)
+        fprintf("%d\t\t\t%0.06f\t\t%0.06f\t\t%0.06f\t\t%0.06f\n",it,gBest.objective,gBest.infeasibility,M,C)
     end
 end

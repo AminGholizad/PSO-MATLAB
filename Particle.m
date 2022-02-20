@@ -4,10 +4,11 @@ classdef Particle
         l
         u
         v
-        cost
-        infeasablity
+        objective
+        infeasibility
+        fcn
         pBest
-        pBest_cost
+        pBest_objective
         pBest_infeasablity
     end
 
@@ -18,31 +19,30 @@ classdef Particle
                 obj.l = lower;
                 obj.u = upper;
                 obj.v = zeros(1,max(length(lower),length(upper)));
-                [obj.cost, obj.infeasablity] = problem(obj.x);
+                obj.fcn = problem;
+                [obj.objective, obj.infeasibility] = obj.fcn(obj.x);
                 obj.pBest = obj.x;
-                obj.pBest_cost = obj.cost;
-                obj.pBest_infeasablity = obj.infeasablity;
+                obj.pBest_objective = obj.objective;
+                obj.pBest_infeasablity = obj.infeasibility;
             end
         end
-        function [obj]= update(obj,w,c,pm,gBest,problem)
+        function [obj]= update(obj,w,c,pm,gBest)
             obj = obj.updateV(w,c,gBest).updateX();
-            [obj.cost, obj.infeasablity] = problem(obj.x);
-            obj = obj.applyMutatation(pm,problem).updatePbest();
+            [obj.objective, obj.infeasibility] = obj.fcn(obj.x);
+            obj = obj.applyMutatation(pm).updatePbest();
         end
         function obj = updateV(obj,w,c,gBest)
             obj.v = w.*obj.v + c(1).*rand.*(obj.pBest-obj.x) + c(2).*rand.*(gBest.x-obj.x);
         end
         function obj = updateX(obj)
-            obj.x = max(min(obj.x + obj.v,obj.u),obj.l);
+            obj.x = max(obj.l,min(obj.x + obj.v,obj.u));
         end
-        function obj = applyMutatation(obj,pm,problem)
+        function obj = applyMutatation(obj,pm)
             if rand<pm
                 other=obj.Mutate(pm);
-                [other.cost,other.infeasablity]=problem(other.x);
-                if other.dominates(obj)
+                [other.objective,other.infeasibility]=obj.fcn(other.x);
+                if rand<0.5 || other.dominates(obj)
                     obj=other;
-                elseif rand<0.5
-                        obj=other;
                 end
             end
         end
@@ -54,14 +54,31 @@ classdef Particle
             ub=min(obj.x(j)+dx,obj.u(j));
             obj.x(j)=unifrnd(lb,ub);
         end
-        function d = dominates(obj,obj1)
-            d = ((obj.infeasablity <= obj1.infeasablity) && (obj.cost < obj1.cost));
+        function tf = dominates(obj,obj1)
+            tf = ((obj.infeasibility <= obj1.infeasibility) && (obj.objective < obj1.objective));
+        end
+        function tf = ne(objs,other)
+            tf = any(vertcat(objs.x) ~= other.x,2);
+        end
+        function tf = eq(objs,other)
+            tf = any(vertcat(objs.x) == other.x,2);
         end
         function obj = updatePbest(obj)
-            if (obj.infeasablity <= obj.pBest_infeasablity) && (obj.cost < obj.pBest_cost)
+            if (obj.infeasibility <= obj.pBest_infeasablity) && (obj.objective < obj.pBest_objective)
               obj.pBest = obj.x;
-              obj.pBest_cost = obj.cost;
-              obj.pBest_infeasablity = obj.infeasablity;
+              obj.pBest_objective = obj.objective;
+              obj.pBest_infeasablity = obj.infeasibility;
+            end
+        end
+        function [M,I] = best(objs)
+            infeasibilities = horzcat(objs.infeasibility);
+            [~,I] = min(infeasibilities);
+            M = objs(I);
+            for i = find(infeasibilities==M.infeasibility)
+                if objs(i).dominates(M)
+                    M = objs(i);
+                    I = i;
+                end
             end
         end
     end
